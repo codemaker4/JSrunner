@@ -1,16 +1,18 @@
 var xScreenSize = innerWidth - 5; // canvas size
 var yScreenSize = innerHeight - 5;
-var OnstaclesPassed = 1;
+var obstacklesPassed = 0;
 var speed = 0;
 var groundHight = yScreenSize / 1.5;
 var obstacles = [];
 var animTime = 7;
 var clock = 0;
 var breathSpeed = 25;
-var playerSize = yScreenSize / 20;
-var breathSize = playerSize / 5;
-var jumpsSpeed = yScreenSize / -40;
-var gravity = playerSize / 50;
+var playerSize = yScreenSize / 10;
+var breathSize = playerSize / 10;
+var jumpSpeed = yScreenSize / -40;
+var gravity = playerSize / 100;
+var stage = 'ingame';
+var maxJumps = 2;
 
 function isPosit(x) {
   return (x>=0);
@@ -28,21 +30,39 @@ function distance(ob1,ob2) {
 }
 
 function collides(ob1,ob2) { // if (collides(this, otherOb)) {}
-  return(distance(ob1,ob2)<ob1.size+ob2.size); // returns True if collision.
+  var dx = ob2.x-ob1.x;
+  var dy = ob2.y-ob1.y;
+  return((posit(dx) < (ob1.xSize/2)+(ob2.xSize/2)) && (posit(dy) < (ob1.ySize/2)+(ob2.ySize/2)));
 }
 
 function smoothChange(now, goal, iterations) {
   return(now+((goal-now)/iterations));
 }
 
-function obstacle(size) {
+function obstacle(size, y) {
   this.x = xScreenSize + size;
-  this.y = yScreenSize / 1.5;
-  this.tick = function() {
+  this.y = y;
+  this.xSize = size;
+  this.ySize = size;
+  this.tick = function(i) {
     this.x -= speed;
     if (collides(this, Player)) {
-
+      // stage = 'death';
+      obstacles.splice(i, 1);
+      return (1);
     }
+    if (this.x < 0 - this.xSize) {
+      obstacles.splice(i, 1);
+      obstacklesPassed += 1;
+      return (1);
+    }
+    return (1);
+  }
+  this.render = function () {
+    rectMode(CENTER);
+    noStroke();
+    fill(100);
+    rect(this.x,this.y,this.xSize,this.ySize);
   }
 }
 
@@ -50,7 +70,8 @@ function obstacle(size) {
 // function newObject() {
 //   this.x = 0;
 //   this.y = 0;
-//   this.size = 0
+//   this.xSize = 0;
+//   this.ySize = 0;
 //   this.tick = function() {
 //
 //   }
@@ -62,14 +83,14 @@ function obstacle(size) {
 function player() {
   this.x = xScreenSize / 10;
   this.y = groundHight;
-  this.size = playerSize;
   this.xSize = playerSize;
   this.ySize = playerSize;
   this.ySpeed = 0;
   this.ticksSinceGrounHit = animTime;
   this.onGround = true; // only false when jumpng && in air.
+  this.jumpsDone = 0;
+  this.jumpPressed = false;
   this.tick = function() {
-    this.size = this.ySize;
     var goalXSize = playerSize; // temp var's for calculating the new shape of the player.
     var goalYSize = playerSize;
     if (clock % (breathSpeed * 2) < breathSpeed) { // set default to breath animation.
@@ -83,27 +104,29 @@ function player() {
       if (this.ySpeed > 1 && !this.onGround) { // true on the tick of landing on the ground. (moving down while toutching the ground.)
         this.ticksSinceGrounHit = 0; // reset
         this.onGround = true;
+        this.jumpsDone = 0;
       }
-      if (this.ticksSinceGrounHit < animTime) {
-        this.xSize = playerSize * 1.5;
-        this.ySize = playerSize / 1.5;
-      }
-      if (keyIsDown(32) || keyIsDown(38)) { // space or arrow_up
-        this.ySpeed = jumpsSpeed; // jumpspeed
-        this.onGround = false;
-      } else if (keyIsDown(40)) {
-        goalXSize = playerSize * 2; // flat, horizontal
+      if (this.ticksSinceGrounHit < animTime*2) {
+        goalXSize = playerSize * 2;
         goalYSize = playerSize / 2;
-        this.ySpeed = 0; // reset jump
-        this.size = playerSize / 2;
-        this.y = groundHight - (this.ySize / 2) + 1;
+        this.y = groundHight - (this.ySize / 2) + 3;
+        this.ySpeed = 0;
       } else {
-        this.ySpeed = 0; // reset jump
         this.y = groundHight - (this.ySize / 2) + 1;
+        this.ySpeed = 0;
       }
     } else if (this.ySpeed < 0) { // moving up
       goalXSize = playerSize / 2; // flat, vertical
       goalYSize = playerSize * 2;
+    }
+    if ((keyIsDown(32) || keyIsDown(38) || mouseIsPressed) && (this.jumpsDone < maxJumps) && !this.jumpPressed) { // space or arrow_up
+      this.jumpPressed = true;
+      this.ySpeed = jumpSpeed; // jumpspeed
+      this.onGround = false;
+      this.jumpsDone += 1;
+    }
+    if (!(keyIsDown(32) || keyIsDown(38) || mouseIsPressed)) {
+      this.jumpPressed = false;
     }
     this.y += this.ySpeed;  // phisycs
     this.ySpeed += gravity; // gravity
@@ -114,9 +137,11 @@ function player() {
   this.render = function() {
     rectMode(CENTER);
     fill(0);
-    rect(this.x, this.y + 1, this.xSize, this.ySize + 1);
-    // fill(127);
-    // ellipse(this.x, this.y, this.size);
+    rect(this.x, this.y, this.xSize, this.ySize + 1);
+    fill(0,0,0,0);
+    stroke(127);
+    strokeWeight(1);
+    rect(this.x, this.y, this.xSize, this.ySize);
   }
 }
 
@@ -126,27 +151,31 @@ function setup() { // p5 setup
 }
 
 function draw() {
-  if (stage = 'ingame') {
+  if (stage == 'ingame') {
     background(255);
-    speed = OnstaclesPassed * 5;
-    for (var i = 0; i < obstacles.length; i++) {
-      obstacles.tick();
+    speed = (obstacklesPassed) + 5;
+    var i = 0;
+    while (i < obstacles.length) {
+      i += obstacles[i].tick(i);
     }
     Player.tick();
     for (var i = 0; i < obstacles.length; i++) {
-      obstacles.render();
+      obstacles[i].render();
     }
     Player.render();
     stroke(0);
-    // line(0, groundHight, xScreenSize, groundHight);
-    fill(50);
-    noStroke();
-    rectMode(CORNER);
-    rect(0, groundHight, xScreenSize, groundHight);
-  } else if (stage = 'gamestart') {
+    line(0, groundHight, xScreenSize, groundHight);
+    // fill(50);
+    // noStroke();
+    // rectMode(CORNER);
+    // rect(0, groundHight, xScreenSize, groundHight);
+    if (round(random(0, (100/((obstacklesPassed/40)+1)))) == 0) {
+      obstacles[obstacles.length] = new obstacle(playerSize, ((yScreenSize / 1.5) - playerSize/2) - random(0,obstacklesPassed*10));
+    }
+  } else if (stage == 'gamestart') {
     obstacles = [];
-  } else if (stage = 'death') {
-
+  } else if (stage == 'death') {
+    console.log('death');
   }
-  clock ++;
+  clock += 1;
 }
