@@ -18,7 +18,8 @@ var regenDelay = 500; // time it takes for regen to kick in after last hit by ob
 var regenIterations = 500; // time it takes to regen (if regen is enabled)
 var regenGoalHP = 50; // max HP after regen
 var playerStartHealth = 100; // health of player after init
-var colors = []; // list where colors for objects are stored
+var defColors = []; // list where default Colors for objects are stored
+var images = []; // list where images for onjects are stored.
 var pointsOnObstacleOutOfScreen = false; // if true gives points if a obstackle reaches the end of the schreen without being hit/hiting the player
 var healthBarMargin = 10;
 var distanceRun = 0;
@@ -59,7 +60,7 @@ function obstacle(size, y) { // obstacle object. this is what the player needs t
     this.x -= speed; // move
     if (collides(this, Player)) { // if collision with player
       // stage = 'death';
-      if (Player.ySpeed > 1 && this.y > Player.y-playerSize) { // player going down && lower then player == good
+      if (Player.ySpeed > 1 && this.y > Player.y) { // player going down && lower then player == good
         Player.ySpeed = jumpSpeed/2; // player jumps slightly
         Player.jumpsDone = 0; // player can doublejump again
         obstacklesPassed += 1; // points
@@ -82,7 +83,7 @@ function obstacle(size, y) { // obstacle object. this is what the player needs t
   this.render = function () {
     rectMode(CENTER); // set rect render mode
     noStroke(); // no stroke
-    fill(colors.obstacle); // get correct color
+    fill(defColors.obstacle); // get correct color
     rect(this.x,this.y,this.xSize,this.ySize); // draw rect
   }
 }
@@ -173,7 +174,7 @@ function player() {
   this.render = function() {
     noStroke();
     rectMode(CENTER);
-    fill(colors.player);
+    fill(defColors.player);
     rect(this.x, this.y, this.xSize, this.ySize + 1); // player
     // fill(0,0,0,0);
     // stroke(127);
@@ -210,9 +211,9 @@ function drawObstackleRender() {
 }
 
 function drawRenderGround() {
-  // stroke(colors.ground);
+  // stroke(defColors.ground);
   // line(0, groundHight, xScreenSize, groundHight);
-  fill(colors.ground);
+  fill(defColors.ground);
   noStroke();
   rectMode(CORNER);
   rect(0, groundHight, xScreenSize, groundHight);
@@ -232,17 +233,17 @@ function mouseClicked() {
 
 function setup() { // p5 setup
   createCanvas(xScreenSize, yScreenSize);
-  colors.player = color(0);
-  colors.obstacle = color(100);
-  colors.ground = color(50);
-  colors.sky = color(255);
+  defColors.player = color(0);
+  defColors.obstacle = color(100);
+  defColors.ground = color(50);
+  defColors.sky = color(255);
   Player = new player();
 }
 
 function draw() {
   if (stage == 'ingame') {
     translate(0,0);
-    background(colors.sky);
+    background(defColors.sky);
     drawSetSpeed();
     Player.tick();
     drawObstackleTick();
@@ -262,7 +263,7 @@ function draw() {
     // console.log('death');
     // alert('you died');
     Player.x = -playerSize*2;
-    background(colors.sky);
+    background(defColors.sky);
     drawObstackleTick();
     drawObstackleRender();
     drawRenderGround();
